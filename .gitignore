@@ -1,0 +1,30 @@
+# virtual environment
+*_env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Data volume — contains keys, real depot, databases
+data/
+
+# Local .env (API keys, tokens)
+.env
+
+# test depot
+DEPOT*.yaml
+
+# large files
+*.db
+
+# Local test/scratch scripts
+nano.py
+repl.py
+test_gemini.py
+loop copy.py
+loop_no_mcp.py
+
+# other files
+todo.md
+SOUL*.md
+*.txt

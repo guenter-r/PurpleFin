@@ -1,0 +1,12 @@
+services:
+  purplefin:
+    build: .
+    restart: unless-stopped
+    ports:
+      # Setup UI — only needed on first run, safe to keep open
+      - "8080:8080"
+    volumes:
+      # All mutable state (DEPOT.yaml, SQLite DBs, .env) persists here
+      - ./data:/app/data
+    environment:
+      - DATA_DIR=/app/data

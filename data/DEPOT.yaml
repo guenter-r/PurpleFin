@@ -1,0 +1,9 @@
+holdings:
+- avg_buy_price: 298.94
+  name: AAPL
+  shares: 40
+  symbol: AAPL
+- avg_buy_price: 409.43
+  name: MSFT
+  shares: 20
+  symbol: MSFT

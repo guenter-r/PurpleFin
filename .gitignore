@@ -6,13 +6,13 @@ __pycache__/
 *.pyc
 
 # Data volume — contains keys, real depot, databases
-data/
+# data/
 
 # Local .env (API keys, tokens)
 .env
 
 # test depot
-DEPOT*.yaml
+# DEPOT*.yaml
 
 # large files
 *.db

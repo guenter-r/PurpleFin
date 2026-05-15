@@ -14,6 +14,14 @@ Built with tinkering and Claude.
 
 ---
 
+## What's coming soon
+
+- **Heartbeat during trading hours only** — monitoring will respect market hours to avoid noise outside sessions
+- **Portfolio optimization** — rules-based suggestions for rebalancing and risk exposure
+- **Ticker lookup for non-US markets** — proper support for European and international symbols like VOW3.DE
+- **Ollama / local model support** — run fully offline with Gemma or other local models, no API key required
+
+
 ## Quick start
 
 ### 1. Clone the repo

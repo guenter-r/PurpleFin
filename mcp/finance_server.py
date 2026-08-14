@@ -28,6 +28,7 @@ from skills.portfolio            import get_portfolio_summary    as _get_portfol
 from skills.manage_position      import manage_position          as _manage_position
 from skills.daily_summary        import get_daily_summary   as _get_daily_summary
 from skills.technical_indicators import get_technical_indicators as _get_technical_indicators
+from skills.portfolio_optimization import optimize_portfolio as _optimize_portfolio
 
 # ---------------------------------------------------------------------------
 # Server instance
@@ -131,6 +132,27 @@ async def get_technical_indicators(symbols: list[str]) -> dict:
     Example: symbols=["AAPL", "MSFT", "EBS.VI", "SAP.DE"]
     """
     return await _get_technical_indicators(symbols)
+
+
+@mcp.tool()
+async def optimize_portfolio(
+    symbols: list[str] = None,
+    min_weight: float = 0.0,
+    max_weight: float = 1.0,
+    objective: str = "max_sharpe",
+    depot: dict | None = None,
+) -> dict:
+    """
+    Compute optimal portfolio weights based on modern portfolio theory (Markowitz).
+    Supports bounds for minimum and maximum weights, and different objectives (max_sharpe, min_volatility).
+    """
+    return await _optimize_portfolio(
+        symbols=symbols,
+        min_weight=min_weight,
+        max_weight=max_weight,
+        objective=objective,
+        depot=depot,
+    )
 
 
 if __name__ == "__main__":

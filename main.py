@@ -17,6 +17,9 @@ from pathlib import Path
 
 import yaml
 from dotenv import load_dotenv
+
+load_dotenv("data/.env")
+
 from fastmcp import Client
 
 from loop import run_react
@@ -24,8 +27,6 @@ from src.mcp_utils import get_tools
 from heartbeat import run_heartbeat
 
 from db.database import init_databases, log_message, get_history_db, get_cache_db
-
-load_dotenv()
 
 # SOUL_PATH  = Path("SOUL.md")
 # DEPOT_PATH = Path("DEPOT.yaml")

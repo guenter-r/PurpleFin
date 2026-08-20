@@ -110,12 +110,17 @@ async def chat_loop(mcp, system, tools, messages, depot):
 async def heartbeat_loop(mcp: Client, system: str, tools: list, messages: list, depot: dict):
     await asyncio.sleep(10)  # small delay so chat loop starts first
     while True:
-        print("\n[heartbeat] running portfolio check...")
-        summary = await run_heartbeat(mcp, system, tools, messages, depot)
-        if summary:
-            messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
-            log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
-            print(f"\n[heartbeat] {summary}\n")
+        now = datetime.now()
+        if 8 <= now.hour < 22:
+            print("\n[heartbeat] running portfolio check...")
+            summary = await run_heartbeat(mcp, system, tools, messages, depot)
+            if summary:
+                messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
+                log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
+                print(f"\n[heartbeat] {summary}\n")
+        else:
+            print(f"\n[heartbeat] out of active hours (8am-10pm). currently {now.strftime('%H:%M')}, skipping.")
+
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 

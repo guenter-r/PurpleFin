@@ -17,6 +17,9 @@ from pathlib import Path
 
 import yaml
 from dotenv import load_dotenv
+
+load_dotenv("data/.env")
+
 from fastmcp import Client
 
 from loop import run_react
@@ -24,8 +27,6 @@ from src.mcp_utils import get_tools
 from heartbeat import run_heartbeat
 
 from db.database import init_databases, log_message, get_history_db, get_cache_db
-
-load_dotenv()
 
 # SOUL_PATH  = Path("SOUL.md")
 # DEPOT_PATH = Path("DEPOT.yaml")
@@ -82,7 +83,7 @@ def build_system(soul: str, depot: dict) -> str:
 
 # ── Chat loop ─────────────────────────────────────────────────────────────────
 
-async def chat_loop(mcp, system, tools, messages, depot):
+async def chat_loop(mcp, system_callable, tools, messages):
     print("[finagent] ready. type 'exit' to quit.\n")
     while True:
         try:
@@ -101,21 +102,26 @@ async def chat_loop(mcp, system, tools, messages, depot):
 
         messages.append({"role": "user", "content": user_input})
         log_message("user", user_input, source="chat")
-        reply = await run_react(mcp, system, tools, messages, depot)
+        reply = await run_react(mcp, system_callable, tools, messages)
         print(f"\nAgent: {reply}\n")
 
 
 # ── Heartbeat loop ────────────────────────────────────────────────────────────
 
-async def heartbeat_loop(mcp: Client, system: str, tools: list, messages: list, depot: dict):
+async def heartbeat_loop(mcp: Client, system_callable, tools: list, messages: list):
     await asyncio.sleep(10)  # small delay so chat loop starts first
     while True:
-        print("\n[heartbeat] running portfolio check...")
-        summary = await run_heartbeat(mcp, system, tools, messages, depot)
-        if summary:
-            messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
-            log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
-            print(f"\n[heartbeat] {summary}\n")
+        now = datetime.now()
+        if 8 <= now.hour < 22:
+            print("\n[heartbeat] running portfolio check...")
+            summary = await run_heartbeat(mcp, system_callable, tools, messages)
+            if summary:
+                messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
+                log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
+                print(f"\n[heartbeat] {summary}\n")
+        else:
+            print(f"\n[heartbeat] out of active hours (8am-10pm). currently {now.strftime('%H:%M')}, skipping.")
+
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 
@@ -124,11 +130,8 @@ async def heartbeat_loop(mcp: Client, system: str, tools: list, messages: list, 
 async def main():
     init_databases()
 
-    soul   = SOUL_PATH.read_text()
-    if not DEPOT_PATH.exists():
-        DEPOT_PATH.write_text(yaml.dump({"holdings": []}, allow_unicode=True))
-    depot = yaml.safe_load(DEPOT_PATH.read_text()) or {}
-    system = build_system(soul, depot)
+    soul = SOUL_PATH.read_text()
+    system_callable = lambda depot: build_system(soul, depot)
 
     messages = load_recent_messages(hours=4)
     if messages:
@@ -139,8 +142,8 @@ async def main():
         print(f"[mcp] connected — {len(tools)} tools: {[t['name'] for t in tools]}")
 
         await asyncio.gather(
-            chat_loop(mcp, system, tools, messages, depot),
-            heartbeat_loop(mcp, system, tools, messages, depot),
+            chat_loop(mcp, system_callable, tools, messages),
+            heartbeat_loop(mcp, system_callable, tools, messages),
         )
 
 

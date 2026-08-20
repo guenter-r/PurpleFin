@@ -48,8 +48,7 @@ HEARTBEAT_INTERVAL = 60 * 60 * 2  # seconds * minutes * hours
 _dm_channel = None
 _messages = []
 _tools = []
-_system = ""
-_depot = {}
+_system_callable = None
 _mcp = None  # set in main() before bot starts
 
 # ── Discord setup ─────────────────────────────────────────────────────────────
@@ -131,7 +130,7 @@ async def on_message(message: discord.Message):
     log_message("user", user_input, source="chat")
 
     async with message.channel.typing():
-        reply = await run_react(_mcp, _system, _tools, _messages, _depot)
+        reply = await run_react(_mcp, _system_callable, _tools, _messages)
 
     await send_dm(reply)
 
@@ -140,28 +139,29 @@ async def on_message(message: discord.Message):
 async def heartbeat_loop():
     await asyncio.sleep(10)  # let bot connect first
     while True:
-        print("\n[heartbeat] running portfolio check...")
-        summary = await run_heartbeat(_mcp, _system, _tools, _messages, _depot)
-        if summary:
-            _messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
-            log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
-            print(f"\n[heartbeat] {summary}\n")
-            await send_dm(f"💜 **Heartbeat Update**\n{summary}")
+        now = datetime.now()
+        if 8 <= now.hour < 22:
+            print("\n[heartbeat] running portfolio check...")
+            summary = await run_heartbeat(_mcp, _system_callable, _tools, _messages)
+            if summary:
+                _messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
+                log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
+                print(f"\n[heartbeat] {summary}\n")
+                await send_dm(f"💜 **Heartbeat Update**\n{summary}")
+        else:
+            print(f"\n[heartbeat] out of active hours (8am-10pm). currently {now.strftime('%H:%M')}, skipping.")
+
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 async def main():
-    global _messages, _tools, _system, _depot, _mcp
+    global _messages, _tools, _system_callable, _mcp
 
     init_databases()
 
     soul = SOUL_PATH.read_text()
-    if not DEPOT_PATH.exists():
-        DEPOT_PATH.write_text(yaml.dump({"holdings": []}, allow_unicode=True))
-    _depot = yaml.safe_load(DEPOT_PATH.read_text()) or {}
-    # _depot = yaml.safe_load(DEPOT_PATH.read_text())
-    _system = build_system(soul, _depot)
+    _system_callable = lambda depot: build_system(soul, depot)
 
     _messages = load_recent_messages(hours=4)
     if _messages:

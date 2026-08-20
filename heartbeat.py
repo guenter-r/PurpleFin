@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from src.llm import call_llm, parse_response, HEARTBEAT_MODEL, get_safe_context
 from src.mcp_utils import execute_tool_cached as execute_tool
 from db.database import log_message
+from loop import load_depot
 
 load_dotenv()
 
@@ -39,24 +40,25 @@ HEARTBEAT_SYSTEM_SUFFIX = (
 
 async def run_heartbeat(
     mcp: Client,
-    system: str,
+    system_callable,
     tools: list,
     messages: list,  # shared history — READ from it, append to it
-    depot: dict,
 ) -> str | None:
     """
     Run one heartbeat ReAct pass.
     Appends the heartbeat prompt + assistant reply to shared messages.
     Returns the reply string, or None if an error occurred.
     """
-    heartbeat_system = system + HEARTBEAT_SYSTEM_SUFFIX
-
     # Append heartbeat trigger to SHARED history (not a local copy)
     messages.append({"role": "user", "content": HEARTBEAT_PROMPT})
     log_message("user", HEARTBEAT_PROMPT, source="heartbeat")
 
     try:
         for _ in range(5):
+            depot = load_depot()
+            system = system_callable(depot)
+            heartbeat_system = system + HEARTBEAT_SYSTEM_SUFFIX
+
             response = await call_llm(
                 model=HEARTBEAT_MODEL,
                 system=heartbeat_system,

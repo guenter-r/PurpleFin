@@ -140,13 +140,18 @@ async def on_message(message: discord.Message):
 async def heartbeat_loop():
     await asyncio.sleep(10)  # let bot connect first
     while True:
-        print("\n[heartbeat] running portfolio check...")
-        summary = await run_heartbeat(_mcp, _system, _tools, _messages, _depot)
-        if summary:
-            _messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
-            log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
-            print(f"\n[heartbeat] {summary}\n")
-            await send_dm(f"💜 **Heartbeat Update**\n{summary}")
+        now = datetime.now()
+        if 8 <= now.hour < 22:
+            print("\n[heartbeat] running portfolio check...")
+            summary = await run_heartbeat(_mcp, _system, _tools, _messages, _depot)
+            if summary:
+                _messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
+                log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
+                print(f"\n[heartbeat] {summary}\n")
+                await send_dm(f"💜 **Heartbeat Update**\n{summary}")
+        else:
+            print(f"\n[heartbeat] out of active hours (8am-10pm). currently {now.strftime('%H:%M')}, skipping.")
+
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 

@@ -39,9 +39,12 @@ def _load_env(path: Path):
 
 
 def _config_is_complete() -> bool:
-    """Return True only if an API key and at least one messenger token are present."""
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    """Return True only if an API key (if needed) and at least one messenger token are present."""
+    llm_provider = os.environ.get("LLM_PROVIDER", "anthropic").lower()
+
+    if llm_provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
         return False
+
     interface = os.environ.get("INTERFACE", "telegram")
     if interface == "telegram" and not os.environ.get("TELEGRAM_BOT_TOKEN"):
         return False

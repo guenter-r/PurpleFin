@@ -1,0 +1,11 @@
+anthropic
+discord.py
+fastapi
+fastmcp
+ollama
+PyPortfolioOpt
+python-dotenv
+python-telegram-bot
+pyyaml
+uvicorn
+yfinance

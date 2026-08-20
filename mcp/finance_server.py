@@ -29,7 +29,6 @@ from skills.manage_position      import manage_position          as _manage_posi
 from skills.daily_summary        import get_daily_summary   as _get_daily_summary
 from skills.technical_indicators import get_technical_indicators as _get_technical_indicators
 from skills.portfolio_optimization import optimize_portfolio as _optimize_portfolio
-from skills.ticker_lookup        import lookup_ticker            as _lookup_ticker
 
 # ---------------------------------------------------------------------------
 # Server instance
@@ -154,18 +153,6 @@ async def optimize_portfolio(
         objective=objective,
         depot=depot,
     )
-
-
-@mcp.tool()
-async def lookup_ticker(query: str) -> list[dict]:
-    """
-    Look up stock ticker symbols by company name via Yahoo Finance search.
-    This is extremely useful when you know the company name (e.g. "Apple", "Erste Group")
-    but not the exact ticker symbol required for other tools (like get_prices, get_news).
-    Returns a list of matching symbols, shortnames, and exchanges.
-    Example: query="Erste Group" -> returns [{'symbol': 'EBS.VI', ...}, ...]
-    """
-    return await _lookup_ticker(query)
 
 
 if __name__ == "__main__":

@@ -114,7 +114,7 @@ async def heartbeat_loop(mcp: Client, system_callable, tools: list, messages: li
         now = datetime.now()
         if 8 <= now.hour < 22:
             print("\n[heartbeat] running portfolio check...")
-            summary = await run_heartbeat(mcp, system, tools, messages, depot)
+            summary = await run_heartbeat(mcp, system_callable, tools, messages)
             if summary:
                 messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
                 log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")

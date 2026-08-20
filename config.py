@@ -16,11 +16,6 @@ Persisted via Docker volume (read-write):
 from pathlib import Path
 import os
 
-# Workaround for FastMCP: It auto-instantiates AsyncAnthropic if the library is installed,
-# which crashes without an API key. If we are using a local provider like Ollama, provide a dummy key.
-if os.environ.get("LLM_PROVIDER", "").lower() == "ollama" and not os.environ.get("ANTHROPIC_API_KEY"):
-    os.environ["ANTHROPIC_API_KEY"] = "dummy_key_for_fastmcp_auto_init"
-
 DATA_DIR  = Path(os.environ.get("DATA_DIR", "./data"))
 SOUL_PATH = Path("SOUL.md")
 DEPOT_PATH = DATA_DIR / "DEPOT.yaml" 

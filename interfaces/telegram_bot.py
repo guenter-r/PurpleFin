@@ -49,8 +49,7 @@ HEARTBEAT_INTERVAL = 60 * 60 * 2  # 2 hours
 # ── Shared state ──────────────────────────────────────────────────────────────
 _messages: list[dict] = []
 _tools:    list[dict] = []
-_system:   str        = ""
-_depot:    dict       = {}
+_system_callable = None
 _mcp:      Client     = None  # set in main() before bot starts
 _app:      Application = None  # set in main()
 
@@ -130,7 +129,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         action=ChatAction.TYPING,
     )
 
-    reply = await run_react(_mcp, _system, _tools, _messages, _depot)
+    reply = await run_react(_mcp, _system_callable, _tools, _messages)
     await send_message(reply, chat_id=update.effective_chat.id)
 
 
@@ -139,7 +138,7 @@ async def heartbeat_loop():
     await asyncio.sleep(10)  # let bot connect first
     while True:
         print("\n[heartbeat] running portfolio check...")
-        summary = await run_heartbeat(_mcp, _system, _tools, _messages, _depot)
+        summary = await run_heartbeat(_mcp, _system_callable, _tools, _messages)
         if summary:
             _messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
             log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
@@ -150,7 +149,7 @@ async def heartbeat_loop():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 async def main():
-    global _messages, _tools, _system, _depot, _mcp, _app
+    global _messages, _tools, _system_callable, _mcp, _app
 
     if not BOT_TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not set in .env")
@@ -159,9 +158,8 @@ async def main():
 
     init_databases()
 
-    soul   = SOUL_PATH.read_text()
-    _depot = yaml.safe_load(DEPOT_PATH.read_text()) if DEPOT_PATH.exists() else {"holdings": []}
-    _system = build_system(soul, _depot)
+    soul = SOUL_PATH.read_text()
+    _system_callable = lambda depot: build_system(soul, depot)
 
     _messages = load_recent_messages(hours=4)
     if _messages:

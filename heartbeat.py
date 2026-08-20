@@ -78,7 +78,13 @@ async def run_heartbeat(
                 return answer
 
             print(f"[heartbeat] calling tools: {[b.name for b in tool_blocks]}")
-            messages.append({"role": "assistant", "content": response.content})
+
+            # Reconstruct the Anthropic-style blocks to avoid provider-specific response object access
+            blocks = []
+            if text_block:
+                blocks.append(text_block)
+            blocks.extend(tool_blocks)
+            messages.append({"role": "assistant", "content": blocks})
 
             results = await asyncio.gather(*[execute_tool(mcp, b, depot) for b in tool_blocks])
             messages.append({"role": "user", "content": list(results)})

@@ -11,9 +11,12 @@ async def execute_tool(mcp: Client, block, depot: dict) -> dict:
     args = dict(block.input)
     if block.name == "get_portfolio_summary":
         args["depot"] = depot
-    result = await mcp.call_tool(block.name, args)
-    content = result.content[0].text if result.content else "{}"
-    return {"type": "tool_result", "tool_use_id": block.id, "content": content}
+    try:
+        result = await mcp.call_tool(block.name, args)
+        content = result.content[0].text if result.content else "{}"
+        return {"type": "tool_result", "tool_use_id": block.id, "content": content}
+    except Exception as e:
+        return {"type": "tool_result", "tool_use_id": block.id, "content": str(e), "is_error": True}
 
 
 async def execute_tool_cached(mcp, block, depot) -> dict:

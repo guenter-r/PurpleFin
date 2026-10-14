@@ -34,6 +34,7 @@ load_dotenv()
 
 HEARTBEAT_INTERVAL = 60 ** 2  # seconds
 
+agent_lock = None
 
 # ── Persistence ───────────────────────────────────────────────────────────────
 
@@ -100,9 +101,11 @@ async def chat_loop(mcp, system, tools, messages, depot):
             await asyncio.sleep(3610)
             continue
 
-        messages.append({"role": "user", "content": user_input})
-        log_message("user", user_input, source="chat")
-        reply = await run_react(mcp, system, tools, messages, depot)
+        async with agent_lock:
+            messages.append({"role": "user", "content": user_input})
+            log_message("user", user_input, source="chat")
+            reply = await run_react(mcp, system, tools, messages, depot)
+
         print(f"\nAgent: {reply}\n")
 
 
@@ -112,10 +115,9 @@ async def heartbeat_loop(mcp: Client, system: str, tools: list, messages: list, 
     await asyncio.sleep(10)  # small delay so chat loop starts first
     while True:
         print("\n[heartbeat] running portfolio check...")
-        summary = await run_heartbeat(mcp, system, tools, messages, depot)
+        async with agent_lock:
+            summary = await run_heartbeat(mcp, system, tools, messages, depot)
         if summary:
-            messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
-            log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
             print(f"\n[heartbeat] {summary}\n")
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
@@ -123,6 +125,8 @@ async def heartbeat_loop(mcp: Client, system: str, tools: list, messages: list, 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 async def main():
+    global agent_lock
+    agent_lock = asyncio.Lock()
     init_databases()
 
     soul   = SOUL_PATH.read_text()

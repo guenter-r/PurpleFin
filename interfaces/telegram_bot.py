@@ -54,7 +54,7 @@ _system:   str        = ""
 _depot:    dict       = {}
 _mcp:      Client     = None  # set in main() before bot starts
 _app:      Application = None  # set in main()
-
+_agent_lock: asyncio.Lock = None
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def load_recent_messages(hours: int = 4) -> list[dict]:
@@ -122,16 +122,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not user_input:
         return
 
-    _messages.append({"role": "user", "content": user_input})
-    log_message("user", user_input, source="chat")
-
     # Show typing indicator while the agent thinks
     await context.bot.send_chat_action(
         chat_id=update.effective_chat.id,
         action=ChatAction.TYPING,
     )
 
-    reply = await run_react(_mcp, _system, _tools, _messages, _depot)
+    async with _agent_lock:
+        _messages.append({"role": "user", "content": user_input})
+        log_message("user", user_input, source="chat")
+
+        reply = await run_react(_mcp, _system, _tools, _messages, _depot)
+
     await send_message(reply, chat_id=update.effective_chat.id)
 
 
@@ -140,10 +142,9 @@ async def heartbeat_loop():
     await asyncio.sleep(10)  # let bot connect first
     while True:
         print("\n[heartbeat] running portfolio check...")
-        summary = await run_heartbeat(_mcp, _system, _tools, _messages, _depot)
+        async with _agent_lock:
+            summary = await run_heartbeat(_mcp, _system, _tools, _messages, _depot)
         if summary:
-            _messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
-            log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
             print(f"\n[heartbeat] {summary}\n")
             await send_message(f"💜 *Heartbeat Update*\n{summary}")
         await asyncio.sleep(HEARTBEAT_INTERVAL)
@@ -151,7 +152,8 @@ async def heartbeat_loop():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 async def main():
-    global _messages, _tools, _system, _depot, _mcp, _app
+    global _messages, _tools, _system, _depot, _mcp, _app, _agent_lock
+    _agent_lock = asyncio.Lock()
 
     if not BOT_TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not set in .env")

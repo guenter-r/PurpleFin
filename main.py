@@ -11,7 +11,7 @@ Responsibilities:
 
 import asyncio
 import datetime
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json, os
 from pathlib import Path
 
@@ -25,11 +25,12 @@ from heartbeat import run_heartbeat
 
 from db.database import init_databases, log_message, get_history_db, get_cache_db
 
-load_dotenv()
-
 # SOUL_PATH  = Path("SOUL.md")
 # DEPOT_PATH = Path("DEPOT.yaml")
-from config import SOUL_PATH, DEPOT_PATH
+from config import SOUL_PATH, DEPOT_PATH, DATA_DIR
+
+load_dotenv(DATA_DIR / ".env")
+load_dotenv()
 
 HEARTBEAT_INTERVAL = 60 ** 2  # seconds
 
@@ -38,7 +39,7 @@ HEARTBEAT_INTERVAL = 60 ** 2  # seconds
 
 def load_recent_messages(hours: int = 4) -> list[dict]:
     """Load messages from the last N hours to seed messages[] on startup."""
-    cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+    cutoff = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)).isoformat()
     with get_history_db() as conn:
         rows = conn.execute(
             "SELECT role, content FROM messages WHERE timestamp > ? ORDER BY id", (cutoff,)

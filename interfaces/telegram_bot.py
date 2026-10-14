@@ -19,7 +19,7 @@ pip install python-telegram-bot>=20.0
 import asyncio
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -39,6 +39,7 @@ from loop import run_react
 from heartbeat import run_heartbeat
 from db.database import init_databases, log_message, get_history_db
 
+load_dotenv(DATA_DIR / ".env")
 load_dotenv()
 
 BOT_TOKEN    = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -57,7 +58,7 @@ _app:      Application = None  # set in main()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def load_recent_messages(hours: int = 4) -> list[dict]:
-    cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+    cutoff = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)).isoformat()
     with get_history_db() as conn:
         rows = conn.execute(
             "SELECT role, content FROM messages WHERE timestamp > ? ORDER BY id", (cutoff,)

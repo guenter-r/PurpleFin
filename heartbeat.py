@@ -15,7 +15,9 @@ from dotenv import load_dotenv
 from src.llm import call_llm, parse_response, HEARTBEAT_MODEL, get_safe_context
 from src.mcp_utils import execute_tool_cached as execute_tool
 from db.database import log_message
+from config import DATA_DIR
 
+load_dotenv(DATA_DIR / ".env")
 load_dotenv()
 
 HEARTBEAT_PROMPT = (

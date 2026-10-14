@@ -8,7 +8,7 @@ Two databases:
 
 import os, json
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -89,7 +89,7 @@ def log_message(role: str, content, source: str = "chat"):
     with get_history_db() as conn:
         conn.execute(
             "INSERT INTO messages (timestamp, role, source, content) VALUES (?, ?, ?, ?)",
-            (datetime.utcnow().isoformat(), role, source, _serialise_content(content))
+            (datetime.now(timezone.utc).replace(tzinfo=None).isoformat(), role, source, _serialise_content(content))
         )
 
 
@@ -118,7 +118,7 @@ def get_cached_result(tool_name: str, ticker: str) -> str | None:
     Return cached result if tool+ticker was fetched within the last 30 minutes.
     Returns None on cache miss or expired entry.
     """
-    cutoff = (datetime.utcnow() - timedelta(minutes=CACHE_TTL_MINUTES)).isoformat()
+    cutoff = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=CACHE_TTL_MINUTES)).isoformat()
     with get_cache_db() as conn:
         row = conn.execute(
             """
@@ -138,7 +138,7 @@ def set_cached_result(tool_name: str, ticker: str, result: str):
             INSERT OR REPLACE INTO tool_cache (tool_name, ticker, result, fetched_at)
             VALUES (?, ?, ?, ?)
             """,
-            (tool_name, ticker, result, datetime.utcnow().isoformat())
+            (tool_name, ticker, result, datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
         )
 
 

@@ -9,7 +9,7 @@ from skills.manage_position import manage_position as _manage_position_direct
 
 async def execute_tool(mcp: Client, block, depot: dict) -> dict:
     args = dict(block.input)
-    if block.name == "get_portfolio_summary":
+    if block.name in ("get_portfolio_summary", "optimize_portfolio"):
         args["depot"] = depot
     result = await mcp.call_tool(block.name, args)
     content = result.content[0].text if result.content else "{}"

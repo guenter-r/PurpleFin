@@ -2,7 +2,9 @@
 
 import os
 from dotenv import load_dotenv
+from config import DATA_DIR
 
+load_dotenv(DATA_DIR / ".env")
 load_dotenv()
 
 PROVIDER = os.getenv("LLM_PROVIDER", "anthropic")  # "anthropic" | "openai" | "google"

@@ -11,7 +11,7 @@ Responsibilities:
 
 import asyncio
 import datetime
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json, os
 from pathlib import Path
 
@@ -25,20 +25,22 @@ from heartbeat import run_heartbeat
 
 from db.database import init_databases, log_message, get_history_db, get_cache_db
 
-load_dotenv()
-
 # SOUL_PATH  = Path("SOUL.md")
 # DEPOT_PATH = Path("DEPOT.yaml")
-from config import SOUL_PATH, DEPOT_PATH
+from config import SOUL_PATH, DEPOT_PATH, DATA_DIR
+
+load_dotenv(DATA_DIR / ".env")
+load_dotenv()
 
 HEARTBEAT_INTERVAL = 60 ** 2  # seconds
 
+agent_lock = None
 
 # ── Persistence ───────────────────────────────────────────────────────────────
 
 def load_recent_messages(hours: int = 4) -> list[dict]:
     """Load messages from the last N hours to seed messages[] on startup."""
-    cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+    cutoff = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)).isoformat()
     with get_history_db() as conn:
         rows = conn.execute(
             "SELECT role, content FROM messages WHERE timestamp > ? ORDER BY id", (cutoff,)
@@ -99,9 +101,11 @@ async def chat_loop(mcp, system, tools, messages, depot):
             await asyncio.sleep(3610)
             continue
 
-        messages.append({"role": "user", "content": user_input})
-        log_message("user", user_input, source="chat")
-        reply = await run_react(mcp, system, tools, messages, depot)
+        async with agent_lock:
+            messages.append({"role": "user", "content": user_input})
+            log_message("user", user_input, source="chat")
+            reply = await run_react(mcp, system, tools, messages, depot)
+
         print(f"\nAgent: {reply}\n")
 
 
@@ -111,10 +115,9 @@ async def heartbeat_loop(mcp: Client, system: str, tools: list, messages: list, 
     await asyncio.sleep(10)  # small delay so chat loop starts first
     while True:
         print("\n[heartbeat] running portfolio check...")
-        summary = await run_heartbeat(mcp, system, tools, messages, depot)
+        async with agent_lock:
+            summary = await run_heartbeat(mcp, system, tools, messages, depot)
         if summary:
-            messages.append({"role": "assistant", "content": f"[Heartbeat] {summary}"})
-            log_message("assistant", f"[Heartbeat] {summary}", source="heartbeat")
             print(f"\n[heartbeat] {summary}\n")
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
@@ -122,6 +125,8 @@ async def heartbeat_loop(mcp: Client, system: str, tools: list, messages: list, 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 async def main():
+    global agent_lock
+    agent_lock = asyncio.Lock()
     init_databases()
 
     soul   = SOUL_PATH.read_text()

@@ -49,8 +49,7 @@ HEARTBEAT_INTERVAL = 60 * 60 * 2  # seconds * minutes * hours
 _dm_channel = None
 _messages = []
 _tools = []
-_system = ""
-_depot = {}
+_system_callable = None
 _mcp = None  # set in main() before bot starts
 _agent_lock = None
 
@@ -133,7 +132,7 @@ async def on_message(message: discord.Message):
         async with _agent_lock:
             _messages.append({"role": "user", "content": user_input})
             log_message("user", user_input, source="chat")
-            reply = await run_react(_mcp, _system, _tools, _messages, _depot)
+            reply = await run_react(_mcp, _system_callable, _tools, _messages)
 
     await send_dm(reply)
 
@@ -144,7 +143,7 @@ async def heartbeat_loop():
     while True:
         print("\n[heartbeat] running portfolio check...")
         async with _agent_lock:
-            summary = await run_heartbeat(_mcp, _system, _tools, _messages, _depot)
+            summary = await run_heartbeat(_mcp, _system_callable, _tools, _messages)
         if summary:
             print(f"\n[heartbeat] {summary}\n")
             await send_dm(f"💜 **Heartbeat Update**\n{summary}")
@@ -153,7 +152,7 @@ async def heartbeat_loop():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 async def main():
-    global _messages, _tools, _system, _depot, _mcp, _agent_lock
+    global _messages, _tools, _system_callable, _mcp, _agent_lock
     _agent_lock = asyncio.Lock()
 
     init_databases()
@@ -161,9 +160,8 @@ async def main():
     soul = SOUL_PATH.read_text()
     if not DEPOT_PATH.exists():
         DEPOT_PATH.write_text(yaml.dump({"holdings": []}, allow_unicode=True))
-    _depot = yaml.safe_load(DEPOT_PATH.read_text()) or {}
-    # _depot = yaml.safe_load(DEPOT_PATH.read_text())
-    _system = build_system(soul, _depot)
+
+    _system_callable = lambda d: build_system(soul, d)
 
     _messages = load_recent_messages(hours=4)
     if _messages:
